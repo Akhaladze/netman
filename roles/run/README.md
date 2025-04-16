@@ -1,57 +1,93 @@
-Akhaladze.Netman Run Role
-========================
+---
 
-A brief description of the role goes here.
+## Ansible Role: `mikrotik_natpmp`
 
-Requirements
-------------
+### Directory Structure
+```bash
+roles/
+└── mikrotik_natpmp/
+    ├── tasks/
+    │   └── main.yml
+    └── vars/
+        └── main.yml
+```
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+### `tasks/main.yml`
+```yaml
 
-Role Variables
---------------
+- name: Enable UPNP in mikrotik
+  community.routeros.command:
+    commands:
+      - /ip upnp set enabled=yes allow-nat-pmp=yes interfaces=bridge
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+- name: Add firewall NAT rule for HTTP
+  community.routeros.command:
+    commands:
+      - /ip firewall nat add chain=dstnat protocol=tcp dst-port=80 action=dst-nat to-addresses={{ internal_server_ip }} to-ports=80
 
-Dependencies
-------------
+- name: Add firewall NAT rule for HTTPS
+  community.routeros.command:
+    commands:
+      - /ip firewall nat add chain=dstnat protocol=tcp dst-port=443 action=dst-nat to-addresses={{ internal_server_ip }} to-ports=443
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```bash
 
-Example Playbook
-----------------
+### `vars/main.yml`
+```bash
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+---
+
+# internal_server_ip: 192.168.88.100  # Replace with your internal server IP
+
+```bash
+
+---
+
+### Requirements
+
+- `community.routeros` collection must be installed:
+
+```bash
+ansible-galaxy collection install community.routeros
+```
+
+---
+
+## Usage
+
+Include this role in your playbook:
 
 ```yaml
-- name: Execute tasks on servers
-  hosts: servers
+- hosts: mikrotik
+  gather_facts: no
   roles:
-    - role: akhaladze.netman.run
-      run_x: 42
+    - mikrotik_natpmp
 ```
 
-Another way to consume this role would be:
+---
 
-```yaml
-- name: Initialize the run role from akhaladze.netman
-  hosts: servers
-  gather_facts: false
-  tasks:
-    - name: Trigger invocation of run role
-      ansible.builtin.include_role:
-        name: akhaladze.netman.run
-      vars:
-        run_x: 42
+## MikroTik CLI Equivalent
+
+### Enable NAT-PMP and UPnP on bridge interface
+
+```bash
+/ip upnp set enabled=yes allow-nat-pmp=yes interfaces=bridge
 ```
 
-License
--------
+### Add NAT Rule for HTTP (port 80)
 
-# TO-DO: Update the license to the one you want to use (delete this line after setting the license)
-BSD
+```bash
+/ip firewall nat add chain=dstnat protocol=tcp dst-port=80 action=dst-nat to-addresses=192.168.88.100 to-ports=80
+```
 
-Author Information
-------------------
+### Add NAT Rule for HTTPS (port 443)
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```bash
+/ip firewall nat add chain=dstnat protocol=tcp dst-port=443 action=dst-nat to-addresses=192.168.88.100 to-ports=443
+```
+
+### Ensure appropriate filter rules exist (example)
+
+```bash
+/ip firewall filter add chain=forward protocol=tcp dst-port=80,443 action=accept
+```

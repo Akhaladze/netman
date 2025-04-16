@@ -1,0 +1,15 @@
+---
+- name: Enable UPnP with NAT-PMP
+  community.routeros.command:
+    commands:
+      - /ip upnp set enabled=yes allow-nat-pmp=yes interfaces=bridge
+
+- name: Add firewall NAT rule for HTTP
+  community.routeros.command:
+    commands:
+      - /ip firewall nat add chain=dstnat protocol=tcp dst-port=80 action=dst-nat to-addresses={{ internal_server_ip }} to-ports=80
+
+- name: Add firewall NAT rule for HTTPS
+  community.routeros.command:
+    commands:
+      - /ip firewall nat add chain=dstnat protocol=tcp dst-port=443 action=dst-nat to-addresses={{ internal_server_ip }} to-ports=443
